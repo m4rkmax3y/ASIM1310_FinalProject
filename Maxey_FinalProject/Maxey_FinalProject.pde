@@ -1,5 +1,5 @@
-// Based on code written by Daniel Shiffman; I'll write new code and alter existing code as I develop the project
-// Kinect Point Cloud 
+// Based on code written by Daniel Shiffman
+// Fire Cloud 
 
 // https://github.com/shiffman/OpenKinect-for-Processing
 // http://shiffman.net/p5/kinect/
@@ -10,17 +10,24 @@ import org.openkinect.processing.*;
 // Kinect Library object
 Kinect kinect;
 
-// Angle for rotation
-float a = 0;
+float r = 0;
+int rIncr = 2;
+float g = 0;
+int gIncr = 3;
+float b = 0;
+int bIncr = 4; 
 
 // We'll use a lookup table so that we don't have to repeat the math over and over
 float[] depthLookUp = new float[2048];
+
+//PImage img = kinect.getDepthImage();
 
 void setup() {
   // Rendering in P3D
   size(800, 600, P3D);
   kinect = new Kinect(this);
   kinect.initDepth();
+
 
   // Lookup table for all possible depth values (0 - 2047)
   for (int i = 0; i < depthLookUp.length; i++) {
@@ -29,18 +36,19 @@ void setup() {
 }
 
 void draw() {
-
-  background(0);
+  colorGradient();
+  //background(0, 2);
+  //image(kinect.getDepthImage(), 0, 0);
 
   // Get the raw depth as array of integers
   int[] depth = kinect.getRawDepth();
 
   // We're just going to calculate and draw every 4th pixel (equivalent of 160x120)
-  int skip = 4;
+  int skip = 3;
 
   // Translate and rotate
-  translate(width/2, height/2, -50);
-  rotateY(a);
+  translate(width/2, height/2, 100);
+  //rotateY(0);
 
   for (int x = 0; x < kinect.width; x += skip) {
     for (int y = 0; y < kinect.height; y += skip) {
@@ -50,19 +58,21 @@ void draw() {
       int rawDepth = depth[offset];
       PVector v = depthToWorld(x, y, rawDepth);
 
-      stroke(255);
+      stroke(r, g, b, b);
       pushMatrix();
-      // Scale up by 200
-      float factor = 200;
+      // Scale up
+      float factor = 600;
       translate(v.x*factor, v.y*factor, factor-v.z*factor);
       // Draw a point
       point(0, 0);
+      //rect(0,0,0,0);
       popMatrix();
     }
   }
 
   // Rotate
-  a += 0.015f;
+  // a += 0.015f;
+  //println(a);
 }
 
 // These functions come from: http://graphics.stanford.edu/~mdfisher/Kinect.html
@@ -86,4 +96,31 @@ PVector depthToWorld(int x, int y, int depthValue) {
   result.y = (float)((y - cy_d) * depth * fy_d);
   result.z = (float)(depth);
   return result;
+}
+
+void colorGradient() {
+  r = r + rIncr;
+  if (r > 255) {
+    r = 255;
+    rIncr = -rIncr;
+  } else if (r < 0) {
+    r = 0;
+    rIncr = -rIncr;
+  } 
+  g = g + gIncr;
+  if (g > 255) {
+    g = 255;
+    gIncr = -gIncr;
+  } else if (g < 20) {
+    g = 20;
+    gIncr = -gIncr;
+  }
+  b = b + bIncr;
+  if (b > 255) {
+    b = 255;
+    bIncr = -bIncr;
+  } else if (b < 20) {
+    b = 20;
+    bIncr = -bIncr;
+  }
 }
