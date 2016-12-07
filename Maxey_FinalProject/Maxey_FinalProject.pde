@@ -1,78 +1,97 @@
-// Based on code written by Daniel Shiffman
-// Fire Cloud 
-
-// https://github.com/shiffman/OpenKinect-for-Processing
-// http://shiffman.net/p5/kinect/
+/*
+ Title: Atomic Paint
+  Instructions: 
+   'z' activates color, 'x' activates b&w, 'shift' enables "paint mode", 'space' takes a snapshot,
+   's' swaps between depth camera and video camera;    
+*/
 
 import org.openkinect.freenect.*;
 import org.openkinect.processing.*;
 
-// Kinect Library object
+float[] depthLookUp = new float[2048];
+boolean capture;
+boolean switcher = true;
+boolean swapper = true;
+
 Kinect kinect;
 
-float r = 0;
-int rIncr = 2;
-float g = 0;
-int gIncr = 3;
-float b = 0;
-int bIncr = 4; 
-
-// We'll use a lookup table so that we don't have to repeat the math over and over
-float[] depthLookUp = new float[2048];
-
-//PImage img = kinect.getDepthImage();
-
 void setup() {
-  // Rendering in P3D
-  size(800, 600, P3D);
+  fullScreen(P3D);
+  background(0, 0);
+  noStroke();
+  ellipseMode(CENTER);
   kinect = new Kinect(this);
   kinect.initDepth();
-
-
-  // Lookup table for all possible depth values (0 - 2047)
+  kinect.initVideo();
+  kinect.enableIR(true);
+  kinect.enableColorDepth(false);
   for (int i = 0; i < depthLookUp.length; i++) {
     depthLookUp[i] = rawDepthToMeters(i);
   }
 }
 
 void draw() {
-  colorGradient();
-  //background(0, 2);
-  //image(kinect.getDepthImage(), 0, 0);
+  if (switcher) {
+    background(0, 0);
+  }
+  if (capture) {
+    saveFrame("snapshot-####.jpg");
+  }
 
-  // Get the raw depth as array of integers
+  PImage dImg = kinect.getDepthImage();
+  PImage vImg = kinect.getVideoImage();
+  PImage img;
+
+  if (swapper) {
+    img = dImg;
+  } else {
+    img = vImg;
+  }
+
+  int space = 5;
   int[] depth = kinect.getRawDepth();
-
-  // We're just going to calculate and draw every 4th pixel (equivalent of 160x120)
-  int skip = 3;
-
-  // Translate and rotate
   translate(width/2, height/2, 100);
-  //rotateY(0);
-
-  for (int x = 0; x < kinect.width; x += skip) {
-    for (int y = 0; y < kinect.height; y += skip) {
-      int offset = x + y*kinect.width;
-
-      // Convert kinect data to world xyz coordinate
-      int rawDepth = depth[offset];
+  for (int x = 0; x < img.width && x < kinect.width; x += space) {
+    for (int y = 0; y < img.height && y < kinect.height; y += space) {
+      int index = x + y * img.width;
+      int dIndex = x + y * kinect.width;
+      int rawDepth = depth[dIndex];
       PVector v = depthToWorld(x, y, rawDepth);
-
-      stroke(r, g, b, b);
+      float r = red(img.pixels[index]);
+      float g = green(img.pixels[index]);
+      float b = blue(img.pixels[index]);
+      float a = alpha(img.pixels[index]);
+      fill(r, g, b, a);
       pushMatrix();
-      // Scale up
-      float factor = 600;
+      float factor = 800;
       translate(v.x*factor, v.y*factor, factor-v.z*factor);
-      // Draw a point
-      point(0, 0);
-      //rect(0,0,0,0);
+      ellipse(0, 0, space, space);
       popMatrix();
     }
   }
+  if (capture) {
+    capture = false;
+  }
+}
 
-  // Rotate
-  // a += 0.015f;
-  //println(a);
+void keyPressed() {
+  if (keyCode == SHIFT) {
+    switcher = !switcher;
+  }
+  if (key == 's') {
+    swapper = !swapper;
+  }
+  if (key == ' ') {
+    capture = true;
+  }
+  if (key == 'z') {
+    kinect.enableIR(false);
+    kinect.enableColorDepth(true);
+  }
+  if (key == 'x') {
+    kinect.enableIR(true);
+    kinect.enableColorDepth(false);
+  }
 }
 
 // These functions come from: http://graphics.stanford.edu/~mdfisher/Kinect.html
@@ -96,31 +115,4 @@ PVector depthToWorld(int x, int y, int depthValue) {
   result.y = (float)((y - cy_d) * depth * fy_d);
   result.z = (float)(depth);
   return result;
-}
-
-void colorGradient() {
-  r = r + rIncr;
-  if (r > 255) {
-    r = 255;
-    rIncr = -rIncr;
-  } else if (r < 0) {
-    r = 0;
-    rIncr = -rIncr;
-  } 
-  g = g + gIncr;
-  if (g > 255) {
-    g = 255;
-    gIncr = -gIncr;
-  } else if (g < 20) {
-    g = 20;
-    gIncr = -gIncr;
-  }
-  b = b + bIncr;
-  if (b > 255) {
-    b = 255;
-    bIncr = -bIncr;
-  } else if (b < 20) {
-    b = 20;
-    bIncr = -bIncr;
-  }
 }
